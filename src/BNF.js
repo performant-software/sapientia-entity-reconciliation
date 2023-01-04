@@ -22,7 +22,6 @@ const query = async query => {
   parseString(res.data, (error, result) => {
       // SRU. Why?!?
       const recordPayload = result['srw:searchRetrieveResponse']['srw:records'][0]['srw:record'];
-      console.log(recordPayload)
 
       if (recordPayload && !error) {
         const records = recordPayload.map(record => record['srw:recordData'][0]['oai_dc:dc'][0]);
