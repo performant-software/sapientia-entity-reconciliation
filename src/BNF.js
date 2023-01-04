@@ -1,69 +1,44 @@
 import { parseString } from 'browser-xml2js';
+import axios from 'axios';
 
-const buildURL = (query, limit) => {
-  return '/bnf?' + [
-    'operation=searchRetrieve',
-    'startRecord=1',
-    'recordSchema=dublincore',
-    'version=1.2',
-    `maximumRecords=${limit}`,
-    `query=bib.anywhere+all+"${query}"`
-  ].join('&')
-}
+const buildParams = (query, limit) => ({
+  operation: 'searchRetrieve',
+  startRecord: 1,
+  recordSchema: 'dublincore',
+  version: 1.2,
+  maximumRecords: limit,
+  query: `bib.anywhere+all+"${query}"`
+})
 
 const getProp = (record, prop) =>
   record[prop] ? record[prop][0] : null;
 
-/**
- * Just an experiment for now...
- */
-export default class BNF {
+const query = async query => {
+  const limit = 20;
 
-  constructor(opt_config) {
-    this.name = opt_config?.name || 'BNF';
-    this.config = opt_config;
-  }
+  const res = await axios.get('https://catalogue.bnf.fr/api/SRU', { params: buildParams(query, limit) })
 
-  query(query, config) {
-    const limit = config.limit || 20;
+  parseString(res.data, (error, result) => {
+      // SRU. Why?!?
+      const recordPayload = result['srw:searchRetrieveResponse']['srw:records'][0]['srw:record'];
 
-    return new Promise((resolve, reject) => {
-      fetch(buildURL(query, limit))
-        .then(response => response.text())
-        .then(xml => {
-          parseString(xml, (error, result) => {
-            if (error) {
-              reject(error);
-            } else {
-              // SRU. Why?!?
-              const recordPayload = result['srw:searchRetrieveResponse']['srw:records'][0]['srw:record'];
+      if (recordPayload && !error) {
+        const records = recordPayload.map(record => record['srw:recordData'][0]['oai_dc:dc'][0]);
 
-              if (recordPayload) {
-                const records = recordPayload.map(record => record['srw:recordData'][0]['oai_dc:dc'][0]);
-            
-                const mapped = records.map(record => {
-                  return {
-                    uri: getProp(record, 'dc:identifier'),
-                    label: JSON.stringify(getProp(record, 'dc:title')),
-                    description: getProp(record, 'dc:description'),
-                    type: 'Work'
-                  }
-                });
-
-                resolve(mapped);
-              } else {
-                resolve([]);
-              }
-            }
-          });
+        return records.map(record => {
+          return {
+            uri: getProp(record, 'dc:identifier'),
+            label: JSON.stringify(getProp(record, 'dc:title')),
+            description: getProp(record, 'dc:description'),
+            type: 'Work'
+          }
         });
-    });
-  }
-
+      } else {
+        return [];
+      }
+    })
 }
 
-BNF.matches = tag =>
-  tag.uri.match(/^https?:\/\/www.wikidata.org\/entity\/Q/g);
-
-BNF.format = tag =>
-  tag.uri.substring(tag.uri.indexOf('entity/Q') + 7);
+export default {
+  query
+}

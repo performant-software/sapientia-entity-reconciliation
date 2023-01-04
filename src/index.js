@@ -12,12 +12,8 @@ const BUILTIN_CONNECTORS = {
   'wikidata': Wikidata
 }
 
-export default (router) => {
-    router.get('/test', (_req, res) => {
-      return res.send('it works!')
-    })
-
-    router.get('/:connector', (req, res) => {
+export default (router, { env }) => {
+    router.get('/:connector', async (req, res) => {
       if (!Object.keys(BUILTIN_CONNECTORS).includes(req.params.connector)) {
         res.status = 400
         return res.send('not a valid connector')
@@ -28,8 +24,8 @@ export default (router) => {
         return res.send('missing search query')
       }
 
-      return BUILTIN_CONNECTORS[req.params.connector]
-        .query(req.query.search)
-        .then(queryRes => res.send(queryRes))
+      const results = await BUILTIN_CONNECTORS[req.params.connector].query(req.query.search, env);
+
+      return res.send(results);
     })
 }

@@ -1,34 +1,25 @@
-export default class DPLA {
+import axios from 'axios';
 
-  constructor(opt_config) {
-    this.name = opt_config?.name || 'DPLA';
-    this.config = opt_config;
+const query = async (query, env) => {
+  if (query.length <= 1) {
+    return [];
   }
 
-  /**
-   * Queries the endpoint, returning a Promise of 
-   * a list of suggestions
-   */
-  query(query) {
-    return fetch(`/dpla?q=${query}&api_key=${this.config.apiKey}`)
-      .then(response => response.json())
-      .then(data => data.docs.map(doc => {
-        const uri = doc.isShownAt;
-        const label = doc.sourceResource.title[0];
-        const description = doc.sourceResource.creator && doc.sourceResource.creator[0];
+  const res = await axios.get(`https://api.dp.la/v2/items?q=${query}&api_key=${env['DPLA_API_KEY']}`);
 
-        return {
-          uri, label, description, 
-          dpla: true // So we can identify DPLA suggestions
-        }
-      })
-    );
-  }
+  return res.data.docs.map(doc => {
+    const uri = doc.isShownAt;
+    const label = doc.sourceResource.title[0];
+    const description = doc.sourceResource.creator && doc.sourceResource.creator[0];
 
+    return {
+      uri,
+      label,
+      description
+    };
+  });
 }
 
-/** DPLA provides original URIs - need to think about proper formatting **/
-DPLA.matches = tag => tag.dpla;
-
-/** DPLA provides original URIs - need to think about proper formatting **/
-DPLA.format = tag => tag.uri.substring(tag.uri.lastIndexOf('/') + 1);
+export default {
+  query
+}
