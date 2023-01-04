@@ -1,4 +1,4 @@
-import { parseString } from 'browser-xml2js';
+import { parseString } from 'xml2js';
 import axios from 'axios';
 
 const buildParams = (query, limit) => ({
@@ -18,25 +18,27 @@ const query = async query => {
 
   const res = await axios.get('https://catalogue.bnf.fr/api/SRU', { params: buildParams(query, limit) })
 
+  let results
   parseString(res.data, (error, result) => {
       // SRU. Why?!?
       const recordPayload = result['srw:searchRetrieveResponse']['srw:records'][0]['srw:record'];
+      console.log(recordPayload)
 
       if (recordPayload && !error) {
         const records = recordPayload.map(record => record['srw:recordData'][0]['oai_dc:dc'][0]);
 
-        return records.map(record => {
-          return {
-            uri: getProp(record, 'dc:identifier'),
-            label: JSON.stringify(getProp(record, 'dc:title')),
-            description: getProp(record, 'dc:description'),
-            type: 'Work'
-          }
-        });
+        results = records.map(record => ({
+          uri: getProp(record, 'dc:identifier'),
+          label: JSON.stringify(getProp(record, 'dc:title')),
+          description: getProp(record, 'dc:description'),
+          type: 'Work'
+        }));
       } else {
-        return [];
+        results = [];
       }
     })
+
+  return results
 }
 
 export default {
