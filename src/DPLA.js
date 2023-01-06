@@ -11,11 +11,13 @@ const query = async (query, env) => {
     const uri = doc.isShownAt;
     const label = doc.sourceResource.title[0];
     const description = doc.sourceResource.creator && doc.sourceResource.creator[0];
+    const type = 'Work';
 
     return {
       uri,
       label,
-      description
+      description,
+      type
     };
   });
 }

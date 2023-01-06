@@ -15,7 +15,8 @@ const query = async (query) => {
     res.data.records.map(result => ({
       uri: result.uri,
       label: getData(result, 'title'),
-      description: concatData(result, ['author', 'publication_details'])
+      description: concatData(result, ['author', 'publication_details']),
+      type: 'Work'
     })) : [];
 }
 
